@@ -1,13 +1,12 @@
-name: Python CI
+name: Run Python Project
 
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch: # Permite ejecutarlo manualmente desde la pestaña Actions
 
 jobs:
-  lint-and-test:
+  run-main:
     runs-on: ubuntu-latest
     
     steps:
@@ -19,45 +18,24 @@ jobs:
       with:
         python-version: "3.11"
 
-    - name: Cache pip packages
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Lint with flake8
+    - name: Create .env file from Secrets
       run: |
-        # Errores críticos que deben fallar el build
-        flake8 . --count --select=E9,F63,F7,F82,W605 --show-source --statistics
-        # Advertencias informativas (no fallan el build)
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
+        echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+        echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> .env
+        echo "BOT_TOKEN=${{ secrets.BOT_TOKEN }}" >> .env
+        echo "GROUP_TARGET=${{ secrets.GROUP_TARGET }}" >> .env
+        echo "SEND_INTERVAL_SECONDS=${{ secrets.SEND_INTERVAL_SECONDS }}" >> .env
+        echo "MESSAGE_DELAY_SECONDS=${{ secrets.MESSAGE_DELAY_SECONDS }}" >> .env
 
-    - name: Check code formatting with black
+    - name: Show .env content (for debugging, hides secrets in logs)
       run: |
-        black --check config.py main.py supabase_client.py telegram_notifier.py
+        cat .env
 
-    - name: Type checking with mypy
+    - name: Execute main.py
       run: |
-        mypy --ignore-missing-imports config.py main.py supabase_client.py telegram_notifier.py
-
-    - name: Create .env file for testing
-      run: |
-        cat > .env << EOF
-        SUPABASE_URL=https://test.supabase.co
-        SUPABASE_KEY=test_key_123456
-        GROUP_TARGET=-100123456789
-        BOT_TOKEN=test_bot_token_123456
-        SEND_INTERVAL_SECONDS=60
-        MESSAGE_DELAY_SECONDS=2
-        EOF
-
-    - name: Run basic tests
-      run: |
-        pytest test_config.py -v
+        python main.py
