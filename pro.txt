@@ -1,0 +1,14 @@
+.
+├── config.py
+├── generate_session.py
+├── main.py
+├── pro.txt
+├── __pycache__
+│   ├── config.cpython-313.pyc
+│   ├── supabase_client.cpython-313.pyc
+│   └── telegram_notifier.cpython-313.pyc
+├── requirements.txt
+├── supabase_client.py
+└── telegram_notifier.py
+
+2 directories, 10 files

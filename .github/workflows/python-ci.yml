@@ -1,0 +1,63 @@
+name: Python CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Cache pip packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Lint with flake8
+      run: |
+        # Errores críticos que deben fallar el build
+        flake8 . --count --select=E9,F63,F7,F82,W605 --show-source --statistics
+        # Advertencias informativas (no fallan el build)
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
+
+    - name: Check code formatting with black
+      run: |
+        black --check config.py main.py supabase_client.py telegram_notifier.py
+
+    - name: Type checking with mypy
+      run: |
+        mypy --ignore-missing-imports config.py main.py supabase_client.py telegram_notifier.py
+
+    - name: Create .env file for testing
+      run: |
+        cat > .env << EOF
+        SUPABASE_URL=https://test.supabase.co
+        SUPABASE_KEY=test_key_123456
+        GROUP_TARGET=-100123456789
+        BOT_TOKEN=test_bot_token_123456
+        SEND_INTERVAL_SECONDS=60
+        MESSAGE_DELAY_SECONDS=2
+        EOF
+
+    - name: Run basic tests
+      run: |
+        pytest test_config.py -v
